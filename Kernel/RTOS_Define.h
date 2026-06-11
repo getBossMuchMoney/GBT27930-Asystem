@@ -5,8 +5,8 @@
  * Version: 00
  * Date:
  * ***************************************************************************/
-#define   cUserMaxTask		16		//The maximum tasks can be up to 16
-#define   cIdleTaskEnable	0		//0: Idle Task Disabled. 1: Enabled
+#define   cUserMaxTask		15		//The maximum User tasks can be up to 15
+#define   cIdleTaskEnable	1		//0: Idle Task Disabled. 1: Enabled
 
 #if    cIdleTaskEnable == 1
 #define	  cMaxTask			(cUserMaxTask+1)
@@ -56,12 +56,16 @@ typedef struct
     uint16_t      uwTaskTimerCnt;
     uint16_t      uwTaskEvent;
     uint16_t      uwTaskEventMask;
+    uint16_t      uwTaskSpeEventWaitTimer;
 }TASK_STRUCT;
 
 #define eTimerEventId       0
 
+#define eSpecialEventTimerDiv     2
+
 extern TASK_STRUCT Task_Struct_Table[cMaxTask];
 extern uint16_t uwTaskRdyList;
-
+extern uint16_t CreateTaskIndex[cUserMaxTask];
+extern uint16_t CreateTaskNum;
 
 

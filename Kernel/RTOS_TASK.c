@@ -11,6 +11,8 @@
 
 //The Task Block Table
 TASK_STRUCT Task_Struct_Table[cMaxTask];
+uint16_t CreateTaskIndex[cUserMaxTask] = {0};
+uint16_t CreateTaskNum = 0;
 
 //The flag for finishing the internal running enviroment initialization
 uint16_t    uwTaskInternalInit;
@@ -52,6 +54,7 @@ void sRTOSInit(void)
         Task_Struct_Table[i].uwTaskTimerPeriod = 0;
         Task_Struct_Table[i].uwTaskEvent = 0x0000;
         Task_Struct_Table[i].uwTaskEventMask = 0xffff;
+        Task_Struct_Table[i].uwTaskSpeEventWaitTimer = 0;
     }
 
     uwTaskInternalInit = 0x0000; //Clear the task internal initialzation flag;
@@ -61,8 +64,8 @@ void sRTOSInit(void)
 
 void sRTOSTaskDefault()
 {
-	asm(" nop");
-	return;
+//	asm(" nop");
+//	return;
 }
 
 /******************************************************************************
@@ -77,12 +80,31 @@ void sRTOSTaskDefault()
  * ***************************************************************************/
 void sRTOSTaskCreate(void (*pTask)(),uint16_t uwPrio, uint16_t uwPeriod, uint16_t uwCnt)
 {
+     uint16_t i = 0,k = 0;
+
      Task_Struct_Table[uwPrio].pTaskFuncAddr = pTask;
      Task_Struct_Table[uwPrio].uwTaskPrio = uwPrio;
      Task_Struct_Table[uwPrio].uwTaskTimerCnt = uwCnt;
      Task_Struct_Table[uwPrio].uwTaskTimerPeriod = uwPeriod;
      Task_Struct_Table[uwPrio].uwTaskEvent = 0x0000;
      Task_Struct_Table[uwPrio].uwTaskEventMask = 0xffff;
+
+     CreateTaskIndex[CreateTaskNum] = uwPrio;
+     CreateTaskNum++;
+
+     for(i = CreateTaskNum;i>0;i--)
+     {
+         if(CreateTaskIndex[i]<CreateTaskIndex[i - 1])
+         {
+             k = CreateTaskIndex[i - 1];
+             CreateTaskIndex[i - 1] = CreateTaskIndex[i];
+             CreateTaskIndex[i] = k;
+         }
+         else
+         {
+             break;
+         }
+     }
 }
 
 /******************************************************************************
@@ -124,16 +146,16 @@ uint16_t sRTOSFindHighPrioRdyTask(void)
  	uwRdyListTemp = uwTaskRdyList;
  	mRTOS_INT_ENABLE();
  	
- 	for(i=0;i<cMaxTask;i++)
+ 	for(i=0;i<CreateTaskNum;i++)
  	{
- 		if((uwRdyListTemp & ((uint16_t)0x1<<i)) != 0)
+ 		if((uwRdyListTemp & ((uint16_t)0x1<<CreateTaskIndex[i])) != 0)
  		{
- 	        uwTaskPrioTemp = i;
+ 	        uwTaskPrioTemp = CreateTaskIndex[i];
  	        break;
  		}
  		else
  		{
- 			uwTaskPrioTemp = (cMaxTask - 1);
+ 			uwTaskPrioTemp = cUserMaxTask;
  		}
  	}
  	
