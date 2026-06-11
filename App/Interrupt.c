@@ -20,6 +20,7 @@
 #include "ParallelTask.h"
 #include "ModbusRtu.h"
 #include "SuperTask.h"
+#include "J1939.h"
 
 interrupt void sADCA1_isr(void);
 interrupt void sRtosTimerInterruptIsr(void);
@@ -191,8 +192,9 @@ interrupt void sCanAIsr(void)
             pPara->RXmod = CAN_A;
             pPara->RXobjID = CTRL_RX_OBJ;
             pPara->rxMsgType = CTRL;
-            CAN_readMesID(pPara);
-            enCanRXQueue();
+//            CAN_readMesID(pPara);
+//            enCanRXQueue();
+            J1939_ReceiveMessages();
             CanaRegs.CAN_IF1CMD.all = ((uint32_t)CAN_IF1CMD_CLRINTPND | (CTRL_RX_OBJ & CAN_IF1CMD_MSG_NUM_M));
 
         }break;

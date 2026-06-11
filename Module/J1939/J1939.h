@@ -109,6 +109,8 @@ typedef int             j1939_int8_t;    /** < 8位无符号整形*/
 #define J1939_PF_DT				        235	    /**< 协议传输---数据传输 PF*/
 #define J1939_PF_TP_CM				    236		/**< 协议传输---链接管理 PF*/
 
+#define J1939_TP_FRAME_NUM              20         /**< TP连接模式单次接收数据帧数*/
+
 //TP的超时时间，单位（ms）
 #define J1939_TP_Tr						200 /**< 宏定义TP的超时时间*/
 #define J1939_TP_Th						500 /**< 宏定义TP的超时时间*/
@@ -144,8 +146,9 @@ typedef int             j1939_int8_t;    /** < 8位无符号整形*/
 /**< TP协议的支持的最大接受发送消息长度(最大可配置为1785)*/
 #define J1939_TP_MAX_MESSAGE_LENGTH 240
 
-
-#define J1939_TP_FREQ    1    //TP协议心跳默认10ms，必须对应J1939_Poll()的执行频率
+//仅支持接收中断
+#define J1939_ONLY_ENABLE_RX_INT   J1939_TRUE
+#define J1939_TP_FREQ    5    //TP协议心跳，必须对应J1939_Poll()的执行频率,GBT27930要求小于10ms,设定建议小于6
 
 /**CAN节点的选择枚举
 *
@@ -359,7 +362,7 @@ extern void             J1939_Request_PGN(j1939_uint32_t pgn ,j1939_uint8_t DA, 
 //创建一个PGN响应
 extern void             J1939_Create_Response(j1939_uint8_t data[], j1939_uint16_t dataLenght, j1939_uint32_t PGN, void (*dataUPFun)(), CAN_NODE  _Can_Node);
 
-
+void  J1939_ReceiveMessages( void );
 #endif //__J1939_H
 
 

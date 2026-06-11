@@ -47,11 +47,9 @@ void main(void)
     //The RTOS initialization
     sRTOSInit();
 
-    sRTOSTaskCreate(J1939_Poll,cPrioJ1939,c1ms,0);
-
     sRTOSTaskCreate(sSciTask,cPrioUart,c20ms,0);
     sRTOSTaskCreate(sParallelTask,cPrioPara,c20ms,0);
-    sRTOSTaskCreate(sChargeProcTask,cPrioCharge,c10ms,0);
+    sRTOSTaskCreate(sChargeProcTask,cPrioCharge,J1939_TP_FREQ,0);
     sRTOSTaskCreate(sSuperTask,cPrioSuper,c20ms,1);
     sRTOSTaskCreate(sMeasureTask,cPrioMeasure,c20ms,3);
     sRTOSTaskCreate(sDataProcTask,cPrioDataProc,c20ms,13);
