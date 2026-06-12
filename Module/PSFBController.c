@@ -83,8 +83,9 @@ void sSampelCalculation(void)
         stSampleCal.f32_T3_SumTemp = 0;
         stSampleCal.f32_T4_SumTemp = 0;
         stSampleCal.f32_T5_SumTemp = 0;
-        sRTOSEventSendIsr(cPrioMeasure,eMeasureACCalEvt);
+        //sRTOSEventSendIsr(cPrioMeasure,eMeasureACCalEvt);
     }
+    sRTOSEventSendIsr(cPrioMeasure,eMeasureACCalEvt);
 }
 
 void sPSFBControllerInit(void)

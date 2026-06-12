@@ -16,6 +16,7 @@
 uint8_t LongDataBuff[J1939_TP_MAX_MESSAGE_LENGTH] = {0};  //长消息接收缓存，默认240个字节
 uint8_t u8_ChargeState = cChargeStandBy;
 uint16_t CEM_CODE = 0;   //CEM错误代码
+uint32_t u32_ChargingTimeCnt = 0;
 static HandShakeStep eHandShakeStep = SEND_CHM;
 static ChargeConfigStep eChargeConfigStep = CHECK_BRO;
 static ChargeRunningStep eChargeRunningStep = SEND_CCS;
@@ -24,26 +25,18 @@ static uint8_t VehicleBEMflag = 0;   //收到BEM报文标志位
 uint8_t CTS_Data[7] = {0x13,0x20,0x15,0x11,0x10,0x20,0x19}; //CTS报文格式：2019年10月11日15时20分13秒，如开启CTS报文，需更新此处数据
 
 ST_CHARGESTACK stChargeData = {
-                               .u16_WaitTim50ms = 0,
-                               .u16_WaitTim250ms = 0,
-                               .u16_WaitTim500ms = 0,
-                               .u16_WaitTim10000ms = 0,
-                               .u16_TimeOutCnt = 0,
-                               .u16_ReConnectCnt = 0,
+                               0,0,0,0,0,0,0,
                                .SendMesBuff = {
                                                .Mxe.SourceAddress = SECC,
                                                .Mxe.PDUSpecific = EVCC,
                                                .Mxe.DataPage = 0,
                                                .Mxe.Res = 0,
-
                                },
 
                                .LongMesBuff = {
                                                .data = LongDataBuff,
                                                .data_num = J1939_TP_MAX_MESSAGE_LENGTH, //必须初始化长帧缓冲区大小
-
                                },
-
 };
 
 ST_VEHICLEMSG stVehicleChargeMsg = {0,0,0,0,0,0,0};        //车辆BCP报文转化数据
@@ -62,6 +55,7 @@ ST_CHARGERCSD stChargerEndding = {0,0,1};   //充电机充电结束CSD发送待转化数据
 UCSTDATA  uCSTData = {.data = {0,0,0,0},};   //充电机CST报文数据缓存
 UBSTDATA  uBSTData = {.data = {0,0,0,0},};   //车辆BST报文转化数据
 
+void sChargerDataUpData(void);
 void Gbt27930_Asystem(void);
 void sStartCharging(void);
 void sStopCharging(void);
@@ -94,17 +88,36 @@ void sChargeTimeoutDeal(void);
 void sChargeErr(void);
 
 
+void sChargerDataUpData(void)
+{
+    //此处更新充电机配置以及状态
+    if(SEND_CCS == eChargeRunningStep && u8_ChargeState == cChargeRunning)
+    {
+        if(stChargerSta.u16_ChargingEnable == 1)
+        {
+            u32_ChargingTimeCnt++;
+            stChargerSta.u16_ChargingTime = u32_ChargingTimeCnt / cTim60s;
+        }
+    }
+
+    stChargerEndding.u16_ChargingTime = stChargerSta.u16_ChargingTime;
+
+}
+
+
 void sChargeProcTask(void)
 {
-    uint16_t event;
-
-    event = suwRTOSGetEvent(cPrioCharge);
-
-    if(event & ((uint16_t)1 << cChargTimerEvt))
-    {
-        //J1939_Poll();         //执行SAE-J1939协议栈
+//    uint16_t event;
+//
+//    event = suwRTOSGetEvent(cPrioCharge);
+//
+//    if(event & ((uint16_t)1 << cChargTimerEvt))
+//    {
+        J1939_Poll();         //运行J1939
+        sChargerDataUpData();
         Gbt27930_Asystem();   //执行GBT27930-2023 A类系统协议栈
-    }
+
+//    }
 
 }
 
@@ -638,7 +651,7 @@ void sChargeConfig(void)
             stChargeData.u16_WaitTim500ms = READY;
             u16_TimeoutCntChange = cTim5s;
             eChargeConfigStep = CHECK_BRO;
-            CEM_CODE = BCP_TIMEOUT;
+            CEM_CODE = BRO_TIMEOUT;
             u8_ChargeState = cChargeTimeoutDeal;
             //执行其他操作
             sStopCharging();
@@ -810,6 +823,7 @@ void sChargeRunning(void)
             if(startCharing == 0 || stVehicleSta.u16_ChargingEnable == 1)
             {
                 startCharing = 1;
+                stChargerSta.u16_ChargingEnable = 1;
                 sStartCharging();
             }
         }
@@ -823,6 +837,8 @@ void sChargeRunning(void)
             stChargeData.u16_TimeOutCnt = 0;
             u16_TimeoutCntChange = cTim5s;
             sStopCharging();
+            stChargerSta.u16_ChargingEnable = 0;
+            u32_ChargingTimeCnt = 0;
             return;
         }
 
@@ -844,6 +860,7 @@ void sChargeRunning(void)
                 {
                     //暂停充电
                     sStopCharging();
+                    stChargerSta.u16_ChargingEnable = 0;
                 }
             }
             else if(pRxBuff->Mxe.PDUFormat == BEM_PGN)
@@ -860,6 +877,8 @@ void sChargeRunning(void)
                 u8_ChargeState = cChargeTimeoutDeal;
                 //执行其他操作
                 sStopCharging();
+                stChargerSta.u16_ChargingEnable = 0;
+                u32_ChargingTimeCnt = 0;
                 return;
             }
             else if(pRxBuff->Mxe.PDUFormat == BST_PGN)
@@ -869,6 +888,8 @@ void sChargeRunning(void)
                 stChargeData.u16_WaitTim50ms = READY;
                 stChargeData.u16_TimeOutCnt = 0;
                 u16_TimeoutCntChange = cTim5s;
+                stChargerSta.u16_ChargingEnable = 0;
+                u32_ChargingTimeCnt = 0;
                 return;
             }
         }
@@ -896,6 +917,7 @@ void sChargeRunning(void)
             startCharing = 0;
             CEM_CODE = BCL_TIMEOUT;
             u8_ChargeState = cChargeTimeoutDeal;
+            stChargerSta.u16_ChargingEnable = 0;
             //执行其他操作
             sStopCharging();
         }
@@ -1086,7 +1108,6 @@ void sChargeTimeoutDeal(void)
 
 void sChargeErr(void)
 {
-    TP_RX_MESSAGE *pLongRxbuff = &stChargeData.LongMesBuff;
     //如果手动复位或者断开回到待机状态
     if(CHARGE_RESET)
     {
@@ -1094,7 +1115,7 @@ void sChargeErr(void)
     }
     //退出充电定期发送CST报文
     SendCST(&uCSTData);
-
+    u32_ChargingTimeCnt = 0;
 }
 
 

@@ -20,6 +20,7 @@
 #include "ParallelTask.h"
 #include "ModbusRtu.h"
 #include "SuperTask.h"
+#include "J1939.h"
 
 interrupt void sADCA1_isr(void);
 interrupt void sRtosTimerInterruptIsr(void);
@@ -84,19 +85,16 @@ interrupt void sADCA1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-
 #pragma CODE_SECTION(sRtosTimerInterruptIsr, ".TI.ramfunc");
 interrupt void sRtosTimerInterruptIsr(void)
 {
     timercnt++;
-	check_sciTurntoRCV();
-	sci_tim_check(SCIA);
-	sci_tim_check(SCIB);
+//	check_sciTurntoRCV();
+//	sci_tim_check(SCIA);
+//	sci_tim_check(SCIB);
 	sRTOSTimerTicker();
 
-    //Reset the interrupt
-//    CpuTimer0Regs.TCR.bit.TIF = 1;
-    PieCtrlRegs.PIEACK.bit.ACK1 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
 interrupt void sSciaRxIsr(void)
@@ -191,8 +189,9 @@ interrupt void sCanAIsr(void)
             pPara->RXmod = CAN_A;
             pPara->RXobjID = CTRL_RX_OBJ;
             pPara->rxMsgType = CTRL;
-            CAN_readMesID(pPara);
-            enCanRXQueue();
+//            CAN_readMesID(pPara);
+//            enCanRXQueue();
+            J1939_ReceiveMessages();
             CanaRegs.CAN_IF1CMD.all = ((uint32_t)CAN_IF1CMD_CLRINTPND | (CTRL_RX_OBJ & CAN_IF1CMD_MSG_NUM_M));
 
         }break;

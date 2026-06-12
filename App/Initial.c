@@ -14,6 +14,7 @@
 #include "Adc_User.h"
 #include "Cmpss_User.h"
 #include "Can_User.h"
+#include "J1939.h"
 
 //static void setupTimer0( void );
 void sMcuInitial(void);
@@ -188,7 +189,11 @@ void sEnableINT(void)
     PieCtrlRegs.PIEIER9.bit.INTx2 = 1;      //SCIA TX
     PieCtrlRegs.PIEIER9.bit.INTx3 = 1;      //SCIB RX
     PieCtrlRegs.PIEIER9.bit.INTx4 = 1;      //SCIB TX
-    PieCtrlRegs.PIEIER9.bit.INTx5 = 0;      //CANA INTERR0
+#if J1939_ONLY_ENABLE_RX_INT
+    PieCtrlRegs.PIEIER9.bit.INTx5 = 1;      //CANA INTERR0
+#else
+    PieCtrlRegs.PIEIER9.bit.INTx5 = 0;      //πÿcan÷–∂œ
+#endif
     PieCtrlRegs.PIEACK.all = 0xFFFF;
 
 

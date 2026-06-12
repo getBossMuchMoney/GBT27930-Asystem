@@ -28,6 +28,13 @@ uint16_t suwRTOSGetEvent(uint16_t uwTaskPrio);
 void sRTOSEventSend(uint16_t uwTaskPrio,uint16_t uwEventId)
 {
  	mRTOS_INT_DISABLE();
+
+    if(Task_Struct_Table[uwTaskPrio].pTaskFuncAddr == sRTOSTaskDefault)
+    {
+        mRTOS_INT_ENABLE();
+        return;
+    }
+
     if((uwEventId > 0) && (Task_Struct_Table[uwTaskPrio].uwTaskSpeEventWaitTimer > 0))
     {
         mRTOS_INT_ENABLE();
@@ -57,6 +64,12 @@ void sRTOSEventSend(uint16_t uwTaskPrio,uint16_t uwEventId)
  * ***************************************************************************/
 void sRTOSEventSendIsr(uint16_t uwTaskPrio,uint16_t uwEventId)
 {
+
+    if(Task_Struct_Table[uwTaskPrio].pTaskFuncAddr == sRTOSTaskDefault)
+    {
+        return;
+    }
+
     if((uwEventId > 0) && (Task_Struct_Table[uwTaskPrio].uwTaskSpeEventWaitTimer > 0))
     {
         return;

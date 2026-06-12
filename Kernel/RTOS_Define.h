@@ -61,11 +61,11 @@ typedef struct
 
 #define eTimerEventId       0
 
-#define eSpecialEventTimerDiv     2
+#define eSpecialEventTimerDiv     1
 
 extern TASK_STRUCT Task_Struct_Table[cMaxTask];
 extern uint16_t uwTaskRdyList;
 extern uint16_t CreateTaskIndex[cUserMaxTask];
 extern uint16_t CreateTaskNum;
-
+void sRTOSTaskDefault();
 

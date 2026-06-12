@@ -11,7 +11,7 @@
 
 //The Task Block Table
 TASK_STRUCT Task_Struct_Table[cMaxTask];
-uint16_t CreateTaskIndex[cUserMaxTask] = {0};
+uint16_t CreateTaskIndex[cUserMaxTask] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint16_t CreateTaskNum = 0;
 
 //The flag for finishing the internal running enviroment initialization
@@ -54,7 +54,7 @@ void sRTOSInit(void)
         Task_Struct_Table[i].uwTaskTimerPeriod = 0;
         Task_Struct_Table[i].uwTaskEvent = 0x0000;
         Task_Struct_Table[i].uwTaskEventMask = 0xffff;
-        Task_Struct_Table[i].uwTaskSpeEventWaitTimer = 0;
+        Task_Struct_Table[i].uwTaskSpeEventWaitTimer = eSpecialEventTimerDiv;
     }
 
     uwTaskInternalInit = 0x0000; //Clear the task internal initialzation flag;
@@ -82,6 +82,11 @@ void sRTOSTaskCreate(void (*pTask)(),uint16_t uwPrio, uint16_t uwPeriod, uint16_
 {
      uint16_t i = 0,k = 0;
 
+     if((CreateTaskNum > cUserMaxTask) || (uwPrio == 0))
+     {
+         return;
+     }
+
      Task_Struct_Table[uwPrio].pTaskFuncAddr = pTask;
      Task_Struct_Table[uwPrio].uwTaskPrio = uwPrio;
      Task_Struct_Table[uwPrio].uwTaskTimerCnt = uwCnt;
@@ -92,17 +97,20 @@ void sRTOSTaskCreate(void (*pTask)(),uint16_t uwPrio, uint16_t uwPeriod, uint16_
      CreateTaskIndex[CreateTaskNum] = uwPrio;
      CreateTaskNum++;
 
-     for(i = CreateTaskNum;i>0;i--)
+     if(CreateTaskNum > 1)
      {
-         if(CreateTaskIndex[i]<CreateTaskIndex[i - 1])
+         for(i = CreateTaskNum - 1;i>0;i--)
          {
-             k = CreateTaskIndex[i - 1];
-             CreateTaskIndex[i - 1] = CreateTaskIndex[i];
-             CreateTaskIndex[i] = k;
-         }
-         else
-         {
-             break;
+             if(CreateTaskIndex[i]<CreateTaskIndex[i - 1])
+             {
+                 k = CreateTaskIndex[i - 1];
+                 CreateTaskIndex[i - 1] = CreateTaskIndex[i];
+                 CreateTaskIndex[i] = k;
+             }
+             else
+             {
+                 break;
+             }
          }
      }
 }
@@ -155,10 +163,15 @@ uint16_t sRTOSFindHighPrioRdyTask(void)
  		}
  		else
  		{
- 			uwTaskPrioTemp = cUserMaxTask;
+ 			uwTaskPrioTemp = 0;
  		}
  	}
  	
+ 	if(CreateTaskNum == 0)
+ 	{
+ 	   uwTaskPrioTemp = 0;
+ 	}
+
  	mRTOS_INT_DISABLE();
  	uwTaskRdyList &= (~((uint16_t)0x1<<uwTaskPrioTemp));
  	mRTOS_INT_ENABLE();

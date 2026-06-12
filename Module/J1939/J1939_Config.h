@@ -42,8 +42,8 @@
 
 #include <J1939/J1939.h>
 #include "CanFunction.h"
-extern CAN_NODE   Can_Node;   //CAN硬件选择
 
+extern CAN_NODE   Can_Node;   //CAN硬件选择
 
 /***************************J1939 地址配置*****************************/
 //设备默认的地址（地址命名是有规定的，参考J1939的附录B 地址和标识符的分配）
@@ -62,15 +62,16 @@ extern CAN_NODE   Can_Node;   //CAN硬件选择
 //当mcu来不及处理消息，发送消息列队是否允许被新的消息覆盖
 #define J1939_OVERWRITE_TX_QUEUE J1939_FALSE
 //是否使用轮询模式（否则使用中断模式）
-#define J1939_POLL_ECAN J1939_TRUE
+#define J1939_POLL_ECAN J1939_FALSE
 //是否启用软件滤波器
 #define J1939SoftwareFilterEn J1939_TRUE
+
 /******************************J1939移植配置函数************************/
 
 #define Port_CAN_Transmit(MsgPtr) J1939_CAN_Transmit(MsgPtr)
 #define Port_CAN_Receive(MsgPtr) J1939_CAN_Receive(MsgPtr)
 #define Port_SetAddressFilter(Address) J1939_SetAddressFilter(Address)
-/*不使用中断模式，不对下面的函数进行移植*/
+/*不使用中断模式，不对下面的函数进行移植，dsp使用接收中断不需要对下面函数移植*/
 #if J1939_POLL_ECAN == J1939_FALSE
 	#define Port_RXinterruptEnable() J1939_RXinterruptEnable() 
 	#define Port_RXinterruptDisable() J1939_RXinterruptDisable() 
@@ -131,6 +132,7 @@ void J1939_SetAddressFilter(unsigned char Ps_Address)
 */
 void J1939_CAN_Transmit(J1939_MESSAGE *MsgPtr)
 {
+    uint32_t  t0 = 0,t1 = 0;
     CanPara_OP *pPara = &ParaCan;
 	switch (Can_Node)
 	{
@@ -152,6 +154,24 @@ void J1939_CAN_Transmit(J1939_MESSAGE *MsgPtr)
 		    memcpy(pPara->ptxdata,MsgPtr->Mxe.Data,pPara->txLen);
 		    pPara->txMsgID = MsgPtr->CanId;
 		    CAN_sendMes(pPara);
+
+#if !J1939_POLL_ECAN
+		    t0 = get_timer();
+	        while (1)
+	        {
+	            t1 = get_timer();
+	            if (*((uint8_t *)(&can_opt.A_ERR_TX_OK + pPara->TXobjID - ERR_TX_OBJ)) == 1)
+	            {
+	                *((uint8_t *)(&can_opt.A_ERR_TX_OK + pPara->TXobjID - ERR_TX_OBJ)) = 0;
+	                break;
+	            }
+	            if ((t1 - t0) > 2)  //超时2毫秒退出等待
+	            {
+	                break;
+	            }
+	        }
+
+#endif
 			break;
 		}
 		case  Select_CAN_NODE_2:
@@ -230,7 +250,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 		}
 		case  Select_CAN_NODE_2:
 		{
@@ -240,7 +259,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 
 		}
 		case  Select_CAN_NODE_3:
@@ -251,7 +269,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 
 		}
 		case  Select_CAN_NODE_4:
@@ -262,12 +279,10 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 		}
 		default  :
 		{
 			return 0;//没有消息
-			break;
 		}
 	}
 	return 0;//没有消息

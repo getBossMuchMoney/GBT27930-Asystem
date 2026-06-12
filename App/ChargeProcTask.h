@@ -28,13 +28,14 @@
 #define cChargeTimeoutDeal  5
 #define cChargeErr          6
 
-#define cTim60s           6000
-#define cTim10s           1000
-#define cTim5s            500
-#define cTim1s            100
-#define cTim250ms         25
-#define cTim500ms         50
-#define cTim50ms          5
+#define cTim60s           60000/J1939_TP_FREQ
+#define cTim10s           10000/J1939_TP_FREQ
+#define cTim5s            5000/J1939_TP_FREQ
+#define cTim1s            1000/J1939_TP_FREQ
+#define cTim250ms         250/J1939_TP_FREQ
+#define cTim500ms         500/J1939_TP_FREQ
+#define cTim50ms          50/J1939_TP_FREQ
+
 
 #define SECC 0x56       //充电机通信地址
 #define EVCC 0xF4       //电动汽车通信地址

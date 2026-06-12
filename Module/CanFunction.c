@@ -39,6 +39,7 @@ uint32_t get_timer(void)
     return timercnt;
 }
 
+
 uint8_t enCanRXQueue(void)
 {
     uint16_t *ptail = &((*pCanRXQueue)[pParaCan->RXmod][pParaCan->rxMsgType].tail);

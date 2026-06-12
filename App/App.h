@@ -15,7 +15,6 @@
 //typedef uint16_t uint8_t;
 //typedef int16_t int8_t;
 
-#define    cPrioJ1939                     5
 #define    cPrioSuper                     1
 #define    cPrioProtect                   2
 #define    cPrioMeasure                   3
@@ -26,6 +25,8 @@
 #define    cPrioPara                      9
 #define    cPrioEEprom                    11
 #define    cPrioLed                       10
+
+
 #define    eLedTimerEvt                 0
 
 //#define TRUE 1
