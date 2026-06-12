@@ -87,8 +87,8 @@ void sParallelTask(void)
     {
         sCanAInit();
     }
-
-    sParaOnlineState();
+    //sParaCanWrite(cParaCanBase, cParaCtrlMboxId, &stParaStruct.stCanFrameTx);
+    //sParaOnlineState();
 }
 
 void sParaSignInState(void)

@@ -25,6 +25,8 @@
 #define    cPrioPara                      9
 #define    cPrioEEprom                    11
 #define    cPrioLed                       10
+
+
 #define    eLedTimerEvt                 0
 
 //#define TRUE 1

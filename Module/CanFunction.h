@@ -22,6 +22,7 @@
 #define cCanTaskRcvErrEvt    2
 #define cCanTaskForwEvt      3
 
+
 typedef enum
 {
     CTRL = 0,

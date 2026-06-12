@@ -42,8 +42,8 @@
 
 #include <J1939/J1939.h>
 #include "CanFunction.h"
-extern CAN_NODE   Can_Node;   //CAN硬件选择
 
+extern CAN_NODE   Can_Node;   //CAN硬件选择
 
 /***************************J1939 地址配置*****************************/
 //设备默认的地址（地址命名是有规定的，参考J1939的附录B 地址和标识符的分配）
@@ -132,7 +132,7 @@ void J1939_SetAddressFilter(unsigned char Ps_Address)
 */
 void J1939_CAN_Transmit(J1939_MESSAGE *MsgPtr)
 {
-    uint32_t  t0, t1 = 0;
+    uint32_t  t0 = 0,t1 = 0;
     CanPara_OP *pPara = &ParaCan;
 	switch (Can_Node)
 	{
@@ -154,6 +154,9 @@ void J1939_CAN_Transmit(J1939_MESSAGE *MsgPtr)
 		    memcpy(pPara->ptxdata,MsgPtr->Mxe.Data,pPara->txLen);
 		    pPara->txMsgID = MsgPtr->CanId;
 		    CAN_sendMes(pPara);
+
+#if !J1939_POLL_ECAN
+		    t0 = get_timer();
 	        while (1)
 	        {
 	            t1 = get_timer();
@@ -167,6 +170,8 @@ void J1939_CAN_Transmit(J1939_MESSAGE *MsgPtr)
 	                break;
 	            }
 	        }
+
+#endif
 			break;
 		}
 		case  Select_CAN_NODE_2:
@@ -245,7 +250,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 		}
 		case  Select_CAN_NODE_2:
 		{
@@ -255,7 +259,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 
 		}
 		case  Select_CAN_NODE_3:
@@ -266,7 +269,6 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 
 		}
 		case  Select_CAN_NODE_4:
@@ -277,12 +279,10 @@ int J1939_CAN_Receive(J1939_MESSAGE *MsgPtr)
 				return 1;
 			}
 			return 0;
-			break;
 		}
 		default  :
 		{
 			return 0;//没有消息
-			break;
 		}
 	}
 	return 0;//没有消息

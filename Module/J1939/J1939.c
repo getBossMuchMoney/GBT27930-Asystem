@@ -123,6 +123,7 @@ J1939_TRANSPORT_TX_INFO         TP_TX_MSG;
 static j1939_uint8_t 	J1939_TransmitMessages( void );
 void J1939_TP_RX_Abort(void);
 void J1939_read_DT_Packet(void);
+void RecvSingleFrame(void);
 
 /**
 * @note  硬件滤波器2 或 软件滤波器  滤波配置（设置PS段）\n
@@ -648,6 +649,7 @@ void J1939_ReceiveMessages( void )
         { 
 #if J1939_TP_RX_TX
 			case J1939_PF_TP_CM:       //参考J1939-21 TP多帧传输协议
+			{
                 _pgn = (j1939_uint32_t)((((j1939_uint32_t)OneMessage.Mxe.Data[7])<<16)&0xFF0000)
                 						+(j1939_uint32_t)((OneMessage.Mxe.Data[6]<<8)&0xFF00)
                 						+(j1939_uint32_t)((OneMessage.Mxe.Data[5])&0xFF);
@@ -682,8 +684,6 @@ void J1939_ReceiveMessages( void )
                     	TP_RX_MSG.state = J1939_TP_RX_READ_DATA;
                     	break;
                     }
-                    goto PutInReceiveQueue;
-                    break;
 				}
                 else if((J1939_TP_Flags_t.state == J1939_TP_RX) && (TP_RX_MSG.state == J1939_TP_RX_DATA_WAIT))
                 {
@@ -717,7 +717,6 @@ void J1939_ReceiveMessages( void )
                         break;
                     }
 
-                    goto PutInReceiveQueue;
                 }
 
                 if(J1939_TP_Flags_t.state == J1939_TP_TX)
@@ -772,12 +771,13 @@ void J1939_ReceiveMessages( void )
 		        		}
 					}
 				}
-				goto PutInReceiveQueue;
-				break;
+                RecvSingleFrame();
+        }break;
 #endif//J1939_TP_RX_TX
 
 #if J1939_TP_RX_TX
-            case J1939_PF_DT:   
+            case J1939_PF_DT:
+            {
                 if((TP_RX_MSG.state == J1939_TP_RX_DATA_WAIT)&&(TP_RX_MSG.tp_rx_msg.SA == OneMessage.Mxe.SourceAddress))
                 {
                 	TP_RX_MSG.tp_rx_msg.data[(OneMessage.Mxe.Data[0]-1)*7u]=OneMessage.Mxe.Data[1];
@@ -798,10 +798,6 @@ void J1939_ReceiveMessages( void )
 
 					if((TP_RX_MSG.packets_ok_num%J1939_TP_FRAME_NUM == 0) ||(TP_RX_MSG.packets_ok_num == TP_RX_MSG.packets_total))
 					{
-                        if(TP_RX_MSG.packets_ok_num == 5)
-                        {
-                            uint16_t k = 5;
-                        }
 					    J1939_read_DT_Packet();
 
 					    break;
@@ -817,9 +813,11 @@ void J1939_ReceiveMessages( void )
 					break ;
                 }
                 //程序不可能运行到这，但是我们不能放弃接受的数据包
-                goto PutInReceiveQueue;
+                RecvSingleFrame();
+            }break;
 #endif//J1939_TP_RX_TX
-            case J1939_PF_REQUEST:   
+            case J1939_PF_REQUEST:
+            {
 				/*用OneMessage.Mxe.PGN 来存下被请求的PGN*/
 				if(OneMessage.Mxe.Data[1] < 240)
 				{
@@ -832,129 +830,124 @@ void J1939_ReceiveMessages( void )
 										+(j1939_uint32_t)((OneMessage.Mxe.Data[0])&0xFF);
 				}
 				J1939_Response(OneMessage.Mxe.PGN);
-                break;    
-            default:   
-PutInReceiveQueue:   
-			{
-/*
-if(OneMessage.Mxe.PDUFormat < 240){
-	OneMessage.Mxe.PGN = (j1939_uint32_t)((OneMessage.Array[0]<<16)&0x030000)
-						+(j1939_uint32_t)((OneMessage.Array[1]<<8)&0xFF00)
-						+0x00;
-}else{
-	OneMessage.Mxe.PGN = (j1939_uint32_t)((OneMessage.Array[0]<<16)&0x030000)
-						+(j1939_uint32_t)((OneMessage.Array[1]<<8)&0xFF00)
-						+(j1939_uint32_t)((OneMessage.Array[2])&0xFF);
-}
-*/
-            	if(OneMessage.Mxe.PDUFormat < 240){
-            		OneMessage.Mxe.PGN = (((j1939_uint32_t)OneMessage.Mxe.Res) << 17)
-            							+(((j1939_uint32_t)OneMessage.Mxe.DataPage) << 16)
-										+(OneMessage.Mxe.PDUFormat << 8);
-            	}else{
-            		OneMessage.Mxe.PGN = (((j1939_uint32_t)OneMessage.Mxe.Res) << 17)
-            							+(((j1939_uint32_t)OneMessage.Mxe.DataPage) << 16)
-										+(OneMessage.Mxe.PDUFormat << 8)
-										+ OneMessage.Mxe.PDUSpecific;
-            	}
+            }break;
+            default:
+            {
+                RecvSingleFrame();
+            }break;
 
-            	switch (Can_Node)
-				{
-					case  Select_CAN_NODE_1:
-					{
-						if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
-							(RXQueueCount_1 < J1939_RX_QUEUE_SIZE))
-						{
-							if (RXQueueCount_1 < J1939_RX_QUEUE_SIZE)
-							{
-								RXQueueCount_1 ++;
-								RXTail_1 ++;
-								if (RXTail_1 >= J1939_RX_QUEUE_SIZE)
-									RXTail_1 = 0;
-							}else{
-								J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
-								J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_1;
-							}
-							RXQueue_1[RXTail_1] = OneMessage;
-						}
-						else
-							J1939_Flags.ReceivedMessagesDropped = 1; //产生数据溢出
-						break;
-					}
-					case  Select_CAN_NODE_2:
-					{
-						if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
-							(RXQueueCount_2 < J1939_RX_QUEUE_SIZE))
-						{
-							if (RXQueueCount_2 < J1939_RX_QUEUE_SIZE)
-							{
-								RXQueueCount_2 ++;
-								RXTail_2 ++;
-								if (RXTail_2 >= J1939_RX_QUEUE_SIZE)
-									RXTail_2 = 0;
-							}else{
-								J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
-								J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_2;
-							}
-							RXQueue_2[RXTail_2] = OneMessage;
-						}
-						else
-							J1939_Flags.ReceivedMessagesDropped = 1;
-						break;
-					}
-					case  Select_CAN_NODE_3:
-					{
-						if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
-							(RXQueueCount_3 < J1939_RX_QUEUE_SIZE))
-						{
-							if (RXQueueCount_3 < J1939_RX_QUEUE_SIZE)
-							{
-								RXQueueCount_3 ++;
-								RXTail_3 ++;
-								if (RXTail_3 >= J1939_RX_QUEUE_SIZE)
-									RXTail_3 = 0;
-							}else{
-								J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
-								J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_3;
-							}
-							RXQueue_3[RXTail_3] = OneMessage;
-						}
-						else
-							J1939_Flags.ReceivedMessagesDropped = 1;
-						break;
-					}
-					case  Select_CAN_NODE_4:
-					{
-						if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
-							(RXQueueCount_4 < J1939_RX_QUEUE_SIZE))
-						{
-							if (RXQueueCount_4 < J1939_RX_QUEUE_SIZE)
-							{
-								RXQueueCount_4 ++;
-								RXTail_4 ++;
-								if (RXTail_4 >= J1939_RX_QUEUE_SIZE)
-									RXTail_4 = 0;
-							}else{
-								J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
-								J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_4;
-							}
-							RXQueue_4[RXTail_4] = OneMessage;
-						}
-						else
-							J1939_Flags.ReceivedMessagesDropped = 1;
-						break;
-					}
-					default  :
-					{
-						break;
-					}
-				}
-			}
-
-        }   
+        }
     }
 
-}   
+}
+
+
+
+void RecvSingleFrame(void)
+{
+    if(OneMessage.Mxe.PDUFormat < 240){
+        OneMessage.Mxe.PGN = (((j1939_uint32_t)OneMessage.Mxe.Res) << 17)
+                            +(((j1939_uint32_t)OneMessage.Mxe.DataPage) << 16)
+                            +(OneMessage.Mxe.PDUFormat << 8);
+    }else{
+        OneMessage.Mxe.PGN = (((j1939_uint32_t)OneMessage.Mxe.Res) << 17)
+                            +(((j1939_uint32_t)OneMessage.Mxe.DataPage) << 16)
+                            +(OneMessage.Mxe.PDUFormat << 8)
+                            + OneMessage.Mxe.PDUSpecific;
+    }
+
+    switch (Can_Node)
+    {
+        case  Select_CAN_NODE_1:
+        {
+            if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
+                (RXQueueCount_1 < J1939_RX_QUEUE_SIZE))
+            {
+                if (RXQueueCount_1 < J1939_RX_QUEUE_SIZE)
+                {
+                    RXQueueCount_1 ++;
+                    RXTail_1 ++;
+                    if (RXTail_1 >= J1939_RX_QUEUE_SIZE)
+                        RXTail_1 = 0;
+                }else{
+                    J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
+                    J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_1;
+                }
+                RXQueue_1[RXTail_1] = OneMessage;
+            }
+            else
+                J1939_Flags.ReceivedMessagesDropped = 1; //产生数据溢出
+            break;
+        }
+        case  Select_CAN_NODE_2:
+        {
+            if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
+                (RXQueueCount_2 < J1939_RX_QUEUE_SIZE))
+            {
+                if (RXQueueCount_2 < J1939_RX_QUEUE_SIZE)
+                {
+                    RXQueueCount_2 ++;
+                    RXTail_2 ++;
+                    if (RXTail_2 >= J1939_RX_QUEUE_SIZE)
+                        RXTail_2 = 0;
+                }else{
+                    J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
+                    J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_2;
+                }
+                RXQueue_2[RXTail_2] = OneMessage;
+            }
+            else
+                J1939_Flags.ReceivedMessagesDropped = 1;
+            break;
+        }
+        case  Select_CAN_NODE_3:
+        {
+            if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
+                (RXQueueCount_3 < J1939_RX_QUEUE_SIZE))
+            {
+                if (RXQueueCount_3 < J1939_RX_QUEUE_SIZE)
+                {
+                    RXQueueCount_3 ++;
+                    RXTail_3 ++;
+                    if (RXTail_3 >= J1939_RX_QUEUE_SIZE)
+                        RXTail_3 = 0;
+                }else{
+                    J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
+                    J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_3;
+                }
+                RXQueue_3[RXTail_3] = OneMessage;
+            }
+            else
+                J1939_Flags.ReceivedMessagesDropped = 1;
+            break;
+        }
+        case  Select_CAN_NODE_4:
+        {
+            if ( (J1939_OVERWRITE_RX_QUEUE == J1939_TRUE) ||
+                (RXQueueCount_4 < J1939_RX_QUEUE_SIZE))
+            {
+                if (RXQueueCount_4 < J1939_RX_QUEUE_SIZE)
+                {
+                    RXQueueCount_4 ++;
+                    RXTail_4 ++;
+                    if (RXTail_4 >= J1939_RX_QUEUE_SIZE)
+                        RXTail_4 = 0;
+                }else{
+                    J1939_Flags.ReceivedMessagesdCover = 1; //产生数据覆盖
+                    J1939_Flags.ReceivedMessagesdCoverOrDroppedNode = Select_CAN_NODE_4;
+                }
+                RXQueue_4[RXTail_4] = OneMessage;
+            }
+            else
+                J1939_Flags.ReceivedMessagesDropped = 1;
+            break;
+        }
+        default  :
+        {
+            break;
+        }
+    }
+}
 
 
 /**

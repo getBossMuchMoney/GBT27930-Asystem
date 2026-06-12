@@ -25,18 +25,21 @@ extern void sRTOSEventSendIsr(uint16_t uwTaskPrio,uint16_t uwEventId);
 #endif
 void sRTOSTimerTicker(void)
 {
-    //u32_CPUtimercnt0 = CpuTimer0Regs.TIM.all;
 	uint16_t  i;
 	
-	for(i=0;i<cMaxTask;i++)
+	for(i=0;i<CreateTaskNum;i++)
 	{
-		if((Task_Struct_Table[i].uwTaskTimerCnt++) >=
-		        (Task_Struct_Table[i].uwTaskTimerPeriod) &&
-		        (Task_Struct_Table[i].uwTaskTimerPeriod != 0))
+	    if(Task_Struct_Table[CreateTaskIndex[i]].uwTaskSpeEventWaitTimer > 0)
+	    {
+	        Task_Struct_Table[CreateTaskIndex[i]].uwTaskSpeEventWaitTimer--;
+	    }
+
+		if((++Task_Struct_Table[CreateTaskIndex[i]].uwTaskTimerCnt) >=
+		        (Task_Struct_Table[CreateTaskIndex[i]].uwTaskTimerPeriod) &&
+		        (Task_Struct_Table[CreateTaskIndex[i]].uwTaskTimerPeriod != 0))
 		{
-			Task_Struct_Table[i].uwTaskTimerCnt = 0;
-			sRTOSEventSendIsr(i,eTimerEventId);
+			Task_Struct_Table[CreateTaskIndex[i]].uwTaskTimerCnt = 0;
+			sRTOSEventSendIsr(CreateTaskIndex[i],eTimerEventId);
 		}
 	}
-	//u32_CPUtimercnt1 = u32_CPUtimercnt0 - CpuTimer0Regs.TIM.all;
 }

@@ -148,7 +148,7 @@ typedef int             j1939_int8_t;    /** < 8位无符号整形*/
 
 //仅支持接收中断
 #define J1939_ONLY_ENABLE_RX_INT   J1939_TRUE
-#define J1939_TP_FREQ    5    //TP协议心跳，必须对应J1939_Poll()的执行频率,GBT27930要求小于10ms,设定建议小于6
+#define J1939_TP_FREQ    5    //TP协议心跳，必须对应J1939_Poll()的执行频率,GBT27930要求小于10ms
 
 /**CAN节点的选择枚举
 *

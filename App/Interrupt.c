@@ -85,19 +85,16 @@ interrupt void sADCA1_isr(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
-
 #pragma CODE_SECTION(sRtosTimerInterruptIsr, ".TI.ramfunc");
 interrupt void sRtosTimerInterruptIsr(void)
 {
     timercnt++;
-	check_sciTurntoRCV();
-	sci_tim_check(SCIA);
-	sci_tim_check(SCIB);
+//	check_sciTurntoRCV();
+//	sci_tim_check(SCIA);
+//	sci_tim_check(SCIB);
 	sRTOSTimerTicker();
 
-    //Reset the interrupt
-//    CpuTimer0Regs.TCR.bit.TIF = 1;
-    PieCtrlRegs.PIEACK.bit.ACK1 = 1;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
 interrupt void sSciaRxIsr(void)

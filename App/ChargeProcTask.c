@@ -25,26 +25,18 @@ static uint8_t VehicleBEMflag = 0;   //收到BEM报文标志位
 uint8_t CTS_Data[7] = {0x13,0x20,0x15,0x11,0x10,0x20,0x19}; //CTS报文格式：2019年10月11日15时20分13秒，如开启CTS报文，需更新此处数据
 
 ST_CHARGESTACK stChargeData = {
-                               .u16_WaitTim50ms = 0,
-                               .u16_WaitTim250ms = 0,
-                               .u16_WaitTim500ms = 0,
-                               .u16_WaitTim10000ms = 0,
-                               .u16_TimeOutCnt = 0,
-                               .u16_ReConnectCnt = 0,
+                               0,0,0,0,0,0,0,
                                .SendMesBuff = {
                                                .Mxe.SourceAddress = SECC,
                                                .Mxe.PDUSpecific = EVCC,
                                                .Mxe.DataPage = 0,
                                                .Mxe.Res = 0,
-
                                },
 
                                .LongMesBuff = {
                                                .data = LongDataBuff,
                                                .data_num = J1939_TP_MAX_MESSAGE_LENGTH, //必须初始化长帧缓冲区大小
-
                                },
-
 };
 
 ST_VEHICLEMSG stVehicleChargeMsg = {0,0,0,0,0,0,0};        //车辆BCP报文转化数据
@@ -115,16 +107,17 @@ void sChargerDataUpData(void)
 
 void sChargeProcTask(void)
 {
-    uint16_t event;
-
-    event = suwRTOSGetEvent(cPrioCharge);
-
-    if(event & ((uint16_t)1 << cChargTimerEvt))
-    {
+//    uint16_t event;
+//
+//    event = suwRTOSGetEvent(cPrioCharge);
+//
+//    if(event & ((uint16_t)1 << cChargTimerEvt))
+//    {
         J1939_Poll();         //运行J1939
         sChargerDataUpData();
         Gbt27930_Asystem();   //执行GBT27930-2023 A类系统协议栈
-    }
+
+//    }
 
 }
 
